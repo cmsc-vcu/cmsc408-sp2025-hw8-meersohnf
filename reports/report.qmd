@@ -273,14 +273,11 @@ where
 
 run_sql_and_return_html(cnx,"""
 SELECT
-  COALESCE(`Income Group`, 'Other') AS income_group,
-  COUNT(*)                         AS country_count
+  `Income Group`, COUNT(*)
 FROM
-  sp25_meersohnf_user
+  world_bank_data.wdi_country
 GROUP BY
   `Income Group`
-ORDER BY
-  country_count DESC
 """)
 
 ```
@@ -296,9 +293,7 @@ ORDER BY
 
 run_sql_and_return_html(cnx,"""
 SELECT
-  `Country Code`,
-  `Short Name`,
-  `Income Group`
+  `Short Name`
 FROM
   sp25_meersohnf_user
 WHERE
@@ -331,13 +326,11 @@ UPDATE sp25_meersohnf_user
 
 run_sql_and_return_html(cnx,"""
 SELECT
-  `Country Code`   AS country_code,
-  `Short Name`     AS short_name,
-  `Income Group`   AS income_group
+  `Income Group`, COUNT(*)
 FROM
   sp25_meersohnf_user
-WHERE
-  `Country Code` = 'VEN';
+GROUP BY
+  `Income Group`
 
 """)
 
@@ -387,19 +380,19 @@ order by
 
 run_sql_and_return_html(cnx,"""
 SELECT
-  `Region`                                          AS region,
-  SUM(CASE WHEN `Income Group` = 'High income'         THEN 1 ELSE 0 END) AS high_income,
-  SUM(CASE WHEN `Income Group` = 'Upper middle income' THEN 1 ELSE 0 END) AS upper_middle_income,
-  SUM(CASE WHEN `Income Group` = 'Lower middle income' THEN 1 ELSE 0 END) AS lower_middle_income,
-  SUM(CASE WHEN `Income Group` = 'Low income'          THEN 1 ELSE 0 END) AS low_income,
-  SUM(CASE WHEN `Income Group` IS NULL                 THEN 1 ELSE 0 END) AS other,
-  COUNT(*)                                                AS total_countries
+  `Region`                                                   AS region,
+  SUM(CASE WHEN `Income Group`='High income'         THEN 1 ELSE 0 END) AS high_income,
+  SUM(CASE WHEN `Income Group`='Upper middle income' THEN 1 ELSE 0 END) AS upper_middle_income,
+  SUM(CASE WHEN `Income Group`='Lower middle income' THEN 1 ELSE 0 END) AS lower_middle_income,
+  SUM(CASE WHEN `Income Group`='Low income'          THEN 1 ELSE 0 END) AS low_income,
+  SUM(CASE WHEN `Income Group` IS NULL               THEN 1 ELSE 0 END) AS other,
+  COUNT(*)                                                 AS total_countries
 FROM
   sp25_meersohnf_user
 GROUP BY
   `Region`
 ORDER BY
-  `Region`
+  `Region`;
 """)
 
 ```
