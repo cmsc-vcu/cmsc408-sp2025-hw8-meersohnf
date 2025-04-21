@@ -127,7 +127,7 @@ drop table if exists skills;
 ```{python}
 # create table
 execute_ddl(cnx,"""
-create table wdi_country as
+create table sp25_meersohnf_user as
 select
 *
 from world_bank_data.wdi_country
@@ -140,7 +140,7 @@ where
 ```{python}
 # show number of records
 run_sql_and_return_html(cnx,"""
-select count(*) from wdi_country
+select count(*) from sp25_meersohnf_user
 """)
 ```
 
@@ -152,7 +152,7 @@ According to the World Bank, in 2020 there were how many countries in the world?
 ## (skills: select, aggregate)
 
 run_sql_and_return_html(cnx,"""
-select count(*) from wdi_country
+select count(*) from sp25_meersohnf_user
 """)
 
 ```
@@ -172,7 +172,7 @@ run_sql_and_return_html(cnx,"""
 select 
   `Region`
 from 
-  wdi_country
+  sp25_meersohnf_user
 group by
   `Region`
 order by
@@ -193,7 +193,7 @@ run_sql_and_return_html(cnx,"""
 select 
   `Region`, count(*) as "Count"
 from 
-  wdi_country
+  sp25_meersohnf_user
 group by
   `Region`
 order by
@@ -215,7 +215,7 @@ select
   `Long Name`,
   `Region`
 from
-  wdi_country
+  sp25_meersohnf_user
 where
   `Region` = 'North America'
 
@@ -237,7 +237,7 @@ select
   `Short Name`,
   `Long Name`
 from
-  wdi_country
+  sp25_meersohnf_user
 where
   `Short Name` = 'Qatar'
 
@@ -255,7 +255,7 @@ where
 
 run_sql_and_return_html(cnx,"""
 select `Country Code`, `Short Name`, `2-alpha code`, `WB-2 code`, `Region`
-from wdi_country
+from sp25_meersohnf_user
 where
    `2-alpha code` <> `WB-2 code`
 
@@ -273,7 +273,7 @@ where
 
 run_sql_and_return_html(cnx,"""
 select `Income Group`, count(*)
-from wdi_country
+from sp25_meersohnf_user
 group by `Income Group`
 """)
 
@@ -294,7 +294,7 @@ select
   `Short Name`,
   `Income Group`
 from
-  wdi_country
+  sp25_meersohnf_user
 where
   `Income Group` is null
 order by
@@ -311,10 +311,10 @@ order by
 ## Write an update comment to correct the issue.
 ## NOTE - if you get this wrong, all subsequent tables will be wrong!
 
-execute_ddl(cnx,"""
-update wdi_country
-   set `Income Group` = 'High income'
- where `Country Code` = 'VEN'
+execute_ddl(cnx, """
+UPDATE sp25_meersohnf_user
+   SET `Income Group` = 'High income'
+ WHERE `Short Name` = 'Venezuela';
 """)
 
 
@@ -324,14 +324,14 @@ update wdi_country
 ## Now, display the country again to verify the change stuck!
 
 run_sql_and_return_html(cnx,"""
-select
-  `Country Code`   as country_code,
-  `Short Name`     as short_name,
-  `Income Group`   as income_group
-from
-  wdi_country
-where
-  `Country Code` = 'VEN'
+SELECT
+  `Country Code`   AS country_code,
+  `Short Name`     AS short_name,
+  `Income Group`   AS income_group
+FROM
+  sp25_meersohnf_user
+WHERE
+  `Country Code` = 'VEN';
 
 """)
 
@@ -351,7 +351,7 @@ select
   `Income Group`,
   count(*) as no_of_countries
 from
-  wdi_country
+  sp25_meersohnf_user
 where
   `Income Group` is not null
 group by
@@ -388,7 +388,7 @@ select
   sum(case when `Income Group` = 'Low income'           then 1 else 0 end) as low_income,
   count(*)                                            as total_countries
 from
-  wdi_country
+  sp25_meersohnf_user
 group by
   `Region`
 order by
@@ -417,7 +417,7 @@ select
   `Region`,
   'Low income'           as income_group
 from
-  wdi_country
+  sp25_meersohnf_user
 where
   `Income Group` = 'Low income'
 group by
@@ -447,16 +447,16 @@ select
   `Region`,
   `Income Group`
 from
-  wdi_country
+  sp25_meersohnf_user
 where
   `Region` = (
     select `Region`
-    from wdi_country
+    from sp25_meersohnf_user
     where `Country Code` = 'MHL'
   )
   and `Income Group` = (
     select `Income Group`
-    from wdi_country
+    from sp25_meersohnf_user
     where `Country Code` = 'MHL'
   )
 order by
@@ -490,13 +490,13 @@ select
   i.income_group,
   coalesce(count(w.`Country Code`),0) as cnt
 from
-  (select distinct region from wdi_country)                 as r
+  (select distinct region from sp25_meersohnf_user)                 as r
 cross join
   (select distinct `Income Group` as income_group
-     from wdi_country
+     from sp25_meersohnf_user
     where `Income Group` is not null)                      as i
 left join
-  wdi_country w
+  sp25_meersohnf_user w
     on w.region       = r.region
    and w.`Income Group` = i.income_group
 group by
@@ -534,7 +534,7 @@ with pair_counts as (
     `Income Group`    as income_group,
     count(*)          as country_count
   from
-    wdi_country
+    sp25_meersohnf_user
   group by
     region,
     `Income Group`
@@ -595,17 +595,17 @@ run_sql_and_return_html(cnx,"""
 select
   region,
   round(sum(case when `Income Group` = 'High income'         then 1 else 0 end)
-        / (select count(*) from wdi_country) * 100, 2) as high_income_pct,
+        / (select count(*) from sp25_meersohnf_user) * 100, 2) as high_income_pct,
   round(sum(case when `Income Group` = 'Upper middle income' then 1 else 0 end)
-        / (select count(*) from wdi_country) * 100, 2) as upper_middle_income_pct,
+        / (select count(*) from sp25_meersohnf_user) * 100, 2) as upper_middle_income_pct,
   round(sum(case when `Income Group` = 'Lower middle income' then 1 else 0 end)
-        / (select count(*) from wdi_country) * 100, 2) as lower_middle_income_pct,
+        / (select count(*) from sp25_meersohnf_user) * 100, 2) as lower_middle_income_pct,
   round(sum(case when `Income Group` = 'Low income'          then 1 else 0 end)
-        / (select count(*) from wdi_country) * 100, 2) as low_income_pct,
+        / (select count(*) from sp25_meersohnf_user) * 100, 2) as low_income_pct,
   round(sum(case when `Income Group` is null                 then 1 else 0 end)
-        / (select count(*) from wdi_country) * 100, 2) as other_pct
+        / (select count(*) from sp25_meersohnf_user) * 100, 2) as other_pct
 from
-  wdi_country
+  sp25_meersohnf_user
 group by
   region
 order by
@@ -627,10 +627,10 @@ run_sql_and_return_html(cnx,"""
 select
   coalesce(`Income Group`, 'Other')            as income_group,
   count(*)                                    as country_count,
-  (select count(*) from wdi_country)           as total_countries,
-  round(count(*) / (select count(*) from wdi_country) * 100, 2) as percent_of_total
+  (select count(*) from sp25_meersohnf_user)           as total_countries,
+  round(count(*) / (select count(*) from sp25_meersohnf_user) * 100, 2) as percent_of_total
 from
-  wdi_country
+  sp25_meersohnf_user
 group by
   `Income Group`
 order by
