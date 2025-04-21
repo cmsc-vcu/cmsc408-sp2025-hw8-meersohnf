@@ -92,8 +92,7 @@ List all non-countries.
 
 run_sql_and_return_html(cnx,"""
 select
-  `Long Name`,
-  `Region`
+  `Long Name`
 from
   world_bank_data.wdi_country
 where
@@ -314,9 +313,8 @@ order by
 
 execute_ddl(cnx,"""
 update wdi_country
-  set `Income Group` = 'High income'
-where
-  `Short Name` = 'Venezuela, RB'
+   set `Income Group` = 'High income'
+ where `Country Code` = 'VEN'
 """)
 
 
@@ -327,13 +325,13 @@ where
 
 run_sql_and_return_html(cnx,"""
 select
-  `Country Code`,
-  `Short Name`,
-  `Income Group`
+  `Country Code`   as country_code,
+  `Short Name`     as short_name,
+  `Income Group`   as income_group
 from
   wdi_country
 where
-  `Short Name` = 'Venezuela, RB'
+  `Country Code` = 'VEN'
 
 """)
 
@@ -383,13 +381,12 @@ order by
 
 run_sql_and_return_html(cnx,"""
 select
-  `Region`                           as region,
+  `Region`                                        as region,
   sum(case when `Income Group` = 'High income'          then 1 else 0 end) as high_income,
   sum(case when `Income Group` = 'Upper middle income'  then 1 else 0 end) as upper_middle_income,
   sum(case when `Income Group` = 'Lower middle income'  then 1 else 0 end) as lower_middle_income,
   sum(case when `Income Group` = 'Low income'           then 1 else 0 end) as low_income,
-  sum(case when `Income Group` is null                  then 1 else 0 end) as other,
-  count(*)                                           as total_countries
+  count(*)                                            as total_countries
 from
   wdi_country
 group by
