@@ -92,11 +92,12 @@ List all non-countries.
 
 run_sql_and_return_html(cnx,"""
 select
-  `Long Name`, `Region`
-  from 
+  `Long Name`,
+  `Region`
+from
   world_bank_data.wdi_country
-  where
-    region is null
+where
+  `Region` is null
 """)
 
 ```
@@ -233,7 +234,9 @@ where
 
 run_sql_and_return_html(cnx,"""
 select
-  `Long Name`, `Region`
+  `Region`,
+  `Short Name`,
+  `Long Name`
 from
   wdi_country
 where
@@ -288,6 +291,7 @@ group by `Income Group`
 
 run_sql_and_return_html(cnx,"""
 select
+  `Country Code`,
   `Short Name`,
   `Income Group`
 from
@@ -310,9 +314,11 @@ order by
 
 execute_ddl(cnx,"""
 update wdi_country
-   set `Income Group` = 'High income'
- where `Short Name` = 'Venezuela, RB'
+  set `Income Group` = 'High income'
+where
+  `Short Name` = 'Venezuela, RB'
 """)
+
 
 
 ```
@@ -321,6 +327,7 @@ update wdi_country
 
 run_sql_and_return_html(cnx,"""
 select
+  `Country Code`,
   `Short Name`,
   `Income Group`
 from
@@ -344,9 +351,11 @@ run_sql_and_return_html(cnx,"""
 select
   `Region`,
   `Income Group`,
-  count(*)
+  count(*) as no_of_countries
 from
   wdi_country
+where
+  `Income Group` is not null
 group by
   `Region`,
   `Income Group`
@@ -374,12 +383,13 @@ order by
 
 run_sql_and_return_html(cnx,"""
 select
-  `Region`                                  as region,
+  `Region` as region,
   sum(case when `Income Group` = 'High income'         then 1 else 0 end) as high_income,
   sum(case when `Income Group` = 'Upper middle income' then 1 else 0 end) as upper_middle_income,
   sum(case when `Income Group` = 'Lower middle income' then 1 else 0 end) as lower_middle_income,
   sum(case when `Income Group` = 'Low income'          then 1 else 0 end) as low_income,
-  count(*)                                         as total_countries
+  sum(case when `Income Group` is null                 then 1 else 0 end) as other,
+  count(*)                                           as total_countries
 from
   wdi_country
 group by
@@ -406,9 +416,9 @@ order by
 
 run_sql_and_return_html(cnx,"""
 select
-  count(*),
+  count(*)                as low_income_count,
   `Region`,
-  'Low income'
+  'Low income'           as income_group
 from
   wdi_country
 where
@@ -480,24 +490,24 @@ order by
 run_sql_and_return_html(cnx,"""
 select
   r.region,
-  i.income_group
+  i.income_group,
+  coalesce(count(w.`Country Code`),0) as cnt
 from
-  (select distinct region
-     from wdi_country) as r
+  (select distinct region from wdi_country)                 as r
 cross join
   (select distinct `Income Group` as income_group
      from wdi_country
-    where `Income Group` is not null) as i
-where
-  not exists (
-    select 1
-      from wdi_country w
-     where w.region = r.region
-       and w.`Income Group` = i.income_group
-  )
+    where `Income Group` is not null)                      as i
+left join
+  wdi_country w
+    on w.region       = r.region
+   and w.`Income Group` = i.income_group
+group by
+  r.region, i.income_group
+having
+  cnt = 0
 order by
-  r.region,
-  i.income_group
+  r.region, i.income_group
 """)
 
 ```
@@ -585,30 +595,24 @@ order by
 ## columns, Region in the rows and Percent of total in each cell of the table.
 
 run_sql_and_return_html(cnx,"""
-SELECT
+select
   region,
-  ROUND(
-    SUM(CASE WHEN `Income Group` = 'High income'         THEN 1 ELSE 0 END)
-    / (SELECT COUNT(*) FROM wdi_country) * 100
-  , 2) AS high_income_pct,
-  ROUND(
-    SUM(CASE WHEN `Income Group` = 'Upper middle income' THEN 1 ELSE 0 END)
-    / (SELECT COUNT(*) FROM wdi_country) * 100
-  , 2) AS upper_middle_income_pct,
-  ROUND(
-    SUM(CASE WHEN `Income Group` = 'Lower middle income' THEN 1 ELSE 0 END)
-    / (SELECT COUNT(*) FROM wdi_country) * 100
-  , 2) AS lower_middle_income_pct,
-  ROUND(
-    SUM(CASE WHEN `Income Group` = 'Low income'          THEN 1 ELSE 0 END)
-    / (SELECT COUNT(*) FROM wdi_country) * 100
-  , 2) AS low_income_pct
-FROM
+  round(sum(case when `Income Group` = 'High income'         then 1 else 0 end)
+        / (select count(*) from wdi_country) * 100, 2) as high_income_pct,
+  round(sum(case when `Income Group` = 'Upper middle income' then 1 else 0 end)
+        / (select count(*) from wdi_country) * 100, 2) as upper_middle_income_pct,
+  round(sum(case when `Income Group` = 'Lower middle income' then 1 else 0 end)
+        / (select count(*) from wdi_country) * 100, 2) as lower_middle_income_pct,
+  round(sum(case when `Income Group` = 'Low income'          then 1 else 0 end)
+        / (select count(*) from wdi_country) * 100, 2) as low_income_pct,
+  round(sum(case when `Income Group` is null                 then 1 else 0 end)
+        / (select count(*) from wdi_country) * 100, 2) as other_pct
+from
   wdi_country
-GROUP BY
+group by
   region
-ORDER BY
-  region;
+order by
+  region
 """)
 
 ```
@@ -624,18 +628,16 @@ ORDER BY
 
 run_sql_and_return_html(cnx,"""
 select
-  `Income Group`               as income_group,
-  count(*)                     as country_count,
-  (select count(*) from wdi_country)  as total_countries,
-  round(
-    count(*) / (select count(*) from wdi_country) * 100
-  , 2)                          as percent_of_total
+  coalesce(`Income Group`, 'Other')            as income_group,
+  count(*)                                    as country_count,
+  (select count(*) from wdi_country)           as total_countries,
+  round(count(*) / (select count(*) from wdi_country) * 100, 2) as percent_of_total
 from
   wdi_country
 group by
   `Income Group`
 order by
-  country_count desc;
+  country_count desc
 """)
 
 ```
