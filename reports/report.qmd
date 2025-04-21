@@ -272,9 +272,15 @@ where
 ## (skills: select, aggregate, group by, order by)
 
 run_sql_and_return_html(cnx,"""
-select `Income Group`, count(*)
-from sp25_meersohnf_user
-group by `Income Group`
+SELECT
+  COALESCE(`Income Group`, 'Other') AS income_group,
+  COUNT(*)                         AS country_count
+FROM
+  sp25_meersohnf_user
+GROUP BY
+  `Income Group`
+ORDER BY
+  country_count DESC
 """)
 
 ```
@@ -289,15 +295,15 @@ group by `Income Group`
 ## in the first column.
 
 run_sql_and_return_html(cnx,"""
-select
+SELECT
   `Country Code`,
   `Short Name`,
   `Income Group`
-from
+FROM
   sp25_meersohnf_user
-where
-  `Income Group` is null
-order by
+WHERE
+  `Income Group` IS NULL
+ORDER BY
   `Short Name`
 """)
 
@@ -314,7 +320,7 @@ order by
 execute_ddl(cnx, """
 UPDATE sp25_meersohnf_user
    SET `Income Group` = 'High income'
- WHERE `Short Name` = 'Venezuela';
+ WHERE `Short Name` = 'Venezuela, RB';
 """)
 
 
@@ -380,18 +386,19 @@ order by
 ## (skills: select, aggregate, group by, nested query)
 
 run_sql_and_return_html(cnx,"""
-select
-  `Region`                                        as region,
-  sum(case when `Income Group` = 'High income'          then 1 else 0 end) as high_income,
-  sum(case when `Income Group` = 'Upper middle income'  then 1 else 0 end) as upper_middle_income,
-  sum(case when `Income Group` = 'Lower middle income'  then 1 else 0 end) as lower_middle_income,
-  sum(case when `Income Group` = 'Low income'           then 1 else 0 end) as low_income,
-  count(*)                                            as total_countries
-from
+SELECT
+  `Region`                                          AS region,
+  SUM(CASE WHEN `Income Group` = 'High income'         THEN 1 ELSE 0 END) AS high_income,
+  SUM(CASE WHEN `Income Group` = 'Upper middle income' THEN 1 ELSE 0 END) AS upper_middle_income,
+  SUM(CASE WHEN `Income Group` = 'Lower middle income' THEN 1 ELSE 0 END) AS lower_middle_income,
+  SUM(CASE WHEN `Income Group` = 'Low income'          THEN 1 ELSE 0 END) AS low_income,
+  SUM(CASE WHEN `Income Group` IS NULL                 THEN 1 ELSE 0 END) AS other,
+  COUNT(*)                                                AS total_countries
+FROM
   sp25_meersohnf_user
-group by
+GROUP BY
   `Region`
-order by
+ORDER BY
   `Region`
 """)
 
@@ -624,17 +631,20 @@ order by
 ## (This is much simpler than task 20!)
 
 run_sql_and_return_html(cnx,"""
-select
-  coalesce(`Income Group`, 'Other')            as income_group,
-  count(*)                                    as country_count,
-  (select count(*) from sp25_meersohnf_user)           as total_countries,
-  round(count(*) / (select count(*) from sp25_meersohnf_user) * 100, 2) as percent_of_total
-from
+SELECT
+  COALESCE(`Income Group`, 'Other') AS income_group,
+  COUNT(*)                         AS country_count,
+  (SELECT COUNT(*) FROM sp25_meersohnf_user)  AS total_countries,
+  ROUND(
+    COUNT(*) 
+    / (SELECT COUNT(*) FROM sp25_meersohnf_user) * 100
+  , 1)                              AS percent_of_total
+FROM
   sp25_meersohnf_user
-group by
+GROUP BY
   `Income Group`
-order by
-  country_count desc
+ORDER BY
+  country_count DESC
 """)
 
 ```
