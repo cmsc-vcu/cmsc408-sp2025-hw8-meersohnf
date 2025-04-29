@@ -121,6 +121,7 @@ drop table if exists peopleskills;
 drop table if exists roles;
 drop table if exists people;
 drop table if exists skills;
+drop table if exists sp25_meersohnf_user;
 """)
 ```
 
@@ -273,11 +274,14 @@ where
 
 run_sql_and_return_html(cnx,"""
 SELECT
-  `Income Group`, COUNT(*)
+  `Income Group`,
+  COUNT(*) AS country_count
 FROM
   world_bank_data.wdi_country
 GROUP BY
   `Income Group`
+ORDER BY
+  country_count DESC;
 """)
 
 ```
@@ -293,13 +297,15 @@ GROUP BY
 
 run_sql_and_return_html(cnx,"""
 SELECT
-  `Short Name`
+  `Country Code`,
+  `Short Name`,
+  `Income Group`
 FROM
-  world_bank_data.wdi_country
+  sp25_meersohnf_user
 WHERE
   `Income Group` IS NULL
-ORDER BY
-  `Short Name`
+  AND `Short Name` = 'Venezuela, RB';
+
 """)
 
 ```
@@ -313,9 +319,12 @@ ORDER BY
 ## NOTE - if you get this wrong, all subsequent tables will be wrong!
 
 execute_ddl(cnx, """
-UPDATE sp25_meersohnf_user
-   SET `Income Group` = 'High income'
- WHERE `Short Name` = 'Venezuela, RB';
+UPDATE
+  sp25_meersohnf_user
+SET
+  `Income Group` = 'High income'
+WHERE
+  `Short Name` = 'Venezuela, RB';
 """)
 
 
@@ -326,11 +335,13 @@ UPDATE sp25_meersohnf_user
 
 run_sql_and_return_html(cnx,"""
 SELECT
-  `Income Group`, COUNT(*)
+  `Country Code`   ,
+  `Short Name`    , 
+  `Income Group`   
 FROM
   sp25_meersohnf_user
-GROUP BY
-  `Income Group`
+WHERE
+  `Country Code` = 'VEN'
 
 """)
 
@@ -385,14 +396,13 @@ SELECT
   SUM(CASE WHEN `Income Group` = 'Upper middle income' THEN 1.0 ELSE 0.0 END) AS upper_middle_income,
   SUM(CASE WHEN `Income Group` = 'Lower middle income' THEN 1.0 ELSE 0.0 END) AS lower_middle_income,
   SUM(CASE WHEN `Income Group` = 'Low income'          THEN 1.0 ELSE 0.0 END) AS low_income,
-  SUM(CASE WHEN `Income Group` IS NULL                 THEN 1.0 ELSE 0.0 END) AS other,
-  COUNT(*) * 1.0                                        AS total_countries
+  SUM(1.0)                                                AS total_countries
 FROM
   sp25_meersohnf_user
 GROUP BY
   `Region`
 ORDER BY
-  `Region`;
+  `Region`
 """)
 
 ```
